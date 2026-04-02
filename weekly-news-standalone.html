@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>每周要闻收集工具</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:#f0f2f5;min-height:100vh}
+
+/* 顶部 */
+.topbar{
+  background:linear-gradient(135deg,#c41230,#8B0000);
+  color:#fff;padding:20px;text-align:center;
+}
+.topbar h1{font-size:22px;font-weight:bold}
+.topbar p{font-size:13px;opacity:.85;margin-top:4px}
+
+.container{max-width:1000px;margin:0 auto;padding:20px}
+
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;
+      box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.card-title{font-size:15px;font-weight:bold;color:#333;margin-bottom:14px;
+            padding-left:12px;border-left:4px solid #c41230}
+
+.btn{background:#c41230;color:#fff;border:none;padding:12px 24px;border-radius:8px;
+     font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .2s}
+.btn:hover{background:#a01028}
+.btn:disabled{background:#ccc;cursor:not-allowed}
+.btn-outline{background:#fff;color:#c41230;border:2px solid #c41230;padding:10px 20px}
+.btn-outline:hover{background:#fff5f5}
+.btn-green{background:#2e7d32}
+.btn-green:hover{background:#1b5e20}
+
+input[type="text"],input[type="date"]{width:100%;padding:10px 14px;border:1px solid #ddd;
+      border-radius:8px;font-size:14px;margin-bottom:10px;outline:none}
+input:focus{border-color:#c41230}
+
+.news-item{display:flex;align-items:flex-start;gap:10px;padding:14px 0;
+           border-bottom:1px solid #f0f0f0}
+.news-item:last-child{border-bottom:none}
+.news-item input[type="checkbox"]{margin-top:3px;width:18px;height:18px;accent-color:#c41230;flex-shrink:0}
+.news-content{flex:1}
+.news-title{font-size:14px;color:#222;line-height:1.6;word-break:break-all}
+.news-meta{font-size:12px;color:#999;margin-top:4px}
+.news-meta span{margin-right:12px}
+
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;margin-right:6px}
+.tag-central{background:#e3f2fd;color:#1565c0}
+.tag-yunnan{background:#e8f5e9;color:#2e7d32}
+.tag-diqing{background:#fff3e0;color:#e65100}
+.tag-party{background:#fce4ec;color:#c2185b}
+
+.stats{display:flex;gap:16px;margin-bottom:14px}
+.stat{background:#f8f9fa;padding:14px 20px;border-radius:8px;text-align:center;flex:1}
+.stat-num{font-size:26px;font-weight:bold;color:#c41230}
+.stat-label{font-size:12px;color:#666;margin-top:2px}
+
+.spinner{width:20px;height:20px;border:2px solid #ddd;border-top-color:#c41230;
+         border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.progress-bar{height:4px;background:#eee;border-radius:2px;overflow:hidden;margin-top:10px}
+.progress-fill{height:100%;background:#c41230;width:0;transition:width .3s}
+
+.section-header{display:flex;justify-content:space-between;align-items:center;
+                margin:16px 0 10px;padding-top:16px;border-top:1px solid #eee}
+.section-title{font-size:14px;font-weight:bold;color:#333}
+
+.empty{text-align:center;padding:50px 20px;color:#999}
+
+.alert{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;
+       padding:12px 16px;font-size:13px;color:#856404;margin-bottom:14px}
+
+.download-box{background:#f8fff8;border:2px solid #2e7d32;border-radius:12px;
+               padding:24px;text-align:center;display:none}
+.download-box.show{display:block}
+
+.flex{display:flex;gap:12px;flex-wrap:wrap}
+.flex>*{flex:1;min-width:200px}
+
+.loading-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999
+}
+.loading-overlay.show{display:flex}
+.loading-card{background:#fff;border-radius:16px;padding:32px;text-align:center}
+.loading-card p{margin-top:12px;color:#666;font-size:14px}
+
+@media(max-width:600px){
+  .stats{flex-wrap:wrap}
+  .flex>*{flex:100%}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>📰 每周要闻收集工具</h1>
+  <p>中央 · 云南省委 · 迪庆州委</p>
+</div>
+
+<div class="container">
+
+  <!-- 说明 -->
+  <div class="card">
+    <div class="card-title">📖 功能说明</div>
+    <div class="alert">
+      <strong>本工具全自动运行。</strong>设置时间范围 → 点击抓取 → 勾选要闻 → 一键生成文件下载。
+    </div>
+  </div>
+
+  <!-- 设置 -->
+  <div class="card">
+    <div class="card-title">⚙️ 设置</div>
+    
+    <div class="flex">
+      <div>
+        <label style="font-size:13px;color:#666;margin-bottom:6px;display:block">开始日期</label>
+        <input type="date" id="date-start">
+      </div>
+      <div>
+        <label style="font-size:13px;color:#666;margin-bottom:6px;display:block">结束日期</label>
+        <input type="date" id="date-end">
+      </div>
+    </div>
+    
+    <div style="margin-top:12px">
+      <label style="font-size:13px;color:#666;margin-bottom:6px;display:block">补充关键词（选填，用逗号分隔）</label>
+      <input type="text" id="keywords" placeholder="例如：党建，会议、重要讲话">
+    </div>
+    
+    <div style="margin-top:14px">
+      <label style="font-size:13px;color:#666;margin-bottom:10px;display:block">要闻级别</label>
+      <label style="margin-right:20px"><input type="checkbox" id="level-central" checked> 中央要闻</label>
+      <label style="margin-right:20px"><input type="checkbox" id="level-yunnan" checked> 云南省委</label>
+      <label style="margin-right:20px"><input type="checkbox" id="level-diqing" checked> 迪庆州委</label>
+    </div>
+    
+    <div style="margin-top:16px">
+      <button class="btn" id="btn-fetch" onclick="fetchNews()">🔍 开始抓取要闻</button>
+      <button class="btn btn-green" id="btn-generate" onclick="generateFiles()" disabled>📥 生成文件</button>
+      <span id="status" style="margin-left:10px;color:#666;font-size:13px"></span>
+    </div>
+    <div class="progress-bar" id="progress-bar" style="display:none">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- 结果 -->
+  <div class="card" id="results-card" style="display:none">
+    <div class="card-title">📋 要闻列表（勾选需要的内容）</div>
+    <div class="stats" id="stats"></div>
+    
+    <div class="section-header">
+      <span class="section-title" id="selected-label">已选择：0 条</span>
+      <div>
+        <button class="btn-outline" onclick="selectAll()" style="padding:6px 12px;font-size:12px">全选</button>
+        <button class="btn-outline" onclick="selectNone()" style="padding:6px 12px;font-size:12px">全不选</button>
+        <button class="btn-outline" onclick="selectReverse()" style="padding:6px 12px;font-size:12px">反选</button>
+        <button class="btn-outline" onclick="selectParty()" style="padding:6px 12px;font-size:12px">🌟 党建类</button>
+      </div>
+    </div>
+    <div id="news-list"></div>
+  </div>
+
+  <!-- 下载 -->
+  <div class="download-box" id="download-box">
+    <h3 style="color:#2e7d32;margin-bottom:12px">✅ 文件已生成！</h3>
+    <p style="color:#666;font-size:13px;margin-bottom:16px">点击下载文件</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-green" onclick="downloadExcel()">📊 下载 Excel</button>
+      <button class="btn" onclick="downloadWord()">📄 下载 Word</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- 加载遮罩 -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-card">
+    <div class="spinner" style="width:40px;height:40px;border-width:3px;margin:0 auto"></div>
+    <p id="loading-text">正在抓取新闻...</p>
+  </div>
+</div>
+
+<script>
+// ===== 新闻来源（纯前端，直接请求）=====
+const NEWS_APIS = {
+  '中央': [
+    // 观察者网-时政
+    {url: 'https://www.guancha.cn/politics/', parse: parseGuancha},
+  ],
+  '云南省委': [
+    // 新浪云南时政
+    {url: 'https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2516&k=%E4%BA%91%E5%8D%97&num=50', parse: parseSina},
+  ],
+  '迪庆州委': [
+    // 迪庆州政府网
+    {url: 'https://www.diqing.gov.cn/xwzx/dqyw.html', parse: parseDiqing},
+  ],
+};
+
+// 党建关键词
+const PARTY_KWS = ['书记','党委','党支部','党建','党组','党风廉政','纪委','监察','巡视',
+  '反腐','廉政','习近平','党中央','国务院','中办','中纪委','工作会','部署',
+  '贯彻','落实','传达','学习','专题','重要指示','重要讲话','从严治党','主题教育',
+  '干部','人事','云南省委','州市','州委','迪庆','香格里拉','维西','德钦'];
+
+// 全局
+let allNews = [];
+let selectedNews = [];
+
+// ===== 初始化 =====
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - today.getDay() + 1);
+  document.getElementById('date-start').value = fmtDate(monday);
+  document.getElementById('date-end').value = fmtDate(today);
+});
+
+function fmtDate(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function setStatus(msg, color='#666') {
+  document.getElementById('status').innerHTML = msg;
+  document.getElementById('status').style.color = color;
+}
+
+function showLoading(text) {
+  document.getElementById('loading-text').textContent = text;
+  document.getElementById('loading-overlay').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').classList.remove('show');
+}
+
+// ===== 抓取新闻 =====
+// 由于浏览器CORS限制，演示模式用示例数据
+async function fetchNews() {
+  const levels = [];
+  if (document.getElementById('level-central').checked) levels.push('中央');
+  if (document.getElementById('level-yunnan').checked) levels.push('云南省委');
+  if (document.getElementById('level-diqing').checked) levels.push('迪庆州委');
+  if (levels.length === 0) { alert('请至少选择一个要闻级别'); return; }
+
+  const btn = document.getElementById('btn-fetch');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px"></span> 抓取中...';
+  showLoading('正在抓取新闻，请稍候...');
+
+  try {
+    // 尝试直接请求（可能被CORS阻止）
+    const results = [];
+    for (const level of levels) {
+      for (const src of NEWS_APIS[level] || []) {
+        try {
+          const resp = await fetch(src.url, {headers: {'User-Agent': 'Mozilla/5.0'}});
+          const html = await resp.text();
+          const items = src.parse(html, level);
+          results.push(...items);
+        } catch(e) {
+          console.log(`${level} 请求失败:`, e.message);
+        }
+      }
+    }
+
+    if (results.length === 0) {
+      // 无法抓取，显示示例数据提示
+      allNews = getSampleNews();
+      setStatus('⚠️ 实时抓取受限，已加载示例数据', '#e65100');
+      document.getElementById('btn-generate').disabled = false;
+    } else {
+      allNews = results;
+      setStatus(`✓ 抓取成功，共 ${results.length} 条`, '#2e7d32');
+      document.getElementById('btn-generate').disabled = false;
+    }
+
+    renderNews(allNews);
+    document.getElementById('results-card').style.display = 'block';
+    document.getElementById('results-card').scrollIntoView({behavior: 'smooth'});
+  } catch(e) {
+    setStatus('抓取失败：' + e.message, '#c41230');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔍 重新抓取';
+    hideLoading();
+  }
+}
+
+// ===== 解析器 =====
+
+function parseGuancha(html, level) {
+  const items = [];
+  const matches = html.match(/<a[^>]+href="(\/politics\/\d{4}_\d{2}_\d{2}_\d+\.shtml)"[^>]*>\s*([^<]{5,80})\s*<\/a>/g) || [];
+  const seen = new Set();
+  
+  for (const m of matches) {
+    const urlMatch = m.match(/href="(\/politics\/[^"]+)"/);
+    const titleMatch = m.match(/>([^<]{5,80})</);
+    if (urlMatch && titleMatch) {
+      const title = titleMatch[1].trim();
+      const url = 'https://www.guancha.cn' + urlMatch[1];
+      const dateMatch = urlMatch[1].match(/(\d{4}_\d{2}_\d{2})/);
+      const date = dateMatch ? dateMatch[1].replace(/_/g, '-') : '';
+      
+      if (!seen.has(title) && title.length > 5) {
+        seen.add(title);
+        items.push({
+          title, url, date,
+          level: level,
+          source: '观察者网',
+          party: PARTY_KWS.some(kw => title.includes(kw)),
+        });
+      }
+    }
+  }
+  return items;
+}
+
+function parseDiqing(html, level) {
+  const items = [];
+  const matches = html.match(/<a[^>]+href="(\/[^"]+\.html)"[^>]*>\s*([^<]{5,60})\s*<\/a>/g) || [];
+  const seen = new Set();
+  
+  for (const m of matches) {
+    const urlMatch = m.match(/href="(\/[^"]+\.html)"/);
+    const titleMatch = m.match(/>([^<]{5,60})</);
+    if (urlMatch && titleMatch) {
+      const title = titleMatch[1].trim();
+      const url = 'https://www.diqing.gov.cn' + urlMatch[1];
+      const dateMatch = urlMatch[1].match(/(\d{8})/);
+      const date = dateMatch ? dateMatch[1] : '';
+      const dateStr = date ? `${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}` : '';
+      
+      const isDiqing = ['迪庆','香格里拉','维西','德钦','州委','州政府'].some(kw => title.includes(kw));
+      if (!seen.has(title) && isDiqing && title.length > 4) {
+        seen.add(title);
+        items.push({
+          title, url, date: dateStr,
+          level: level,
+          source: '迪庆州政府',
+          party: PARTY_KWS.some(kw => title.includes(kw)),
+        });
+      }
+    }
+  }
+  return items;
+}
+
+function parseSina(html, level) {
+  try {
+    const data = JSON.parse(html);
+    const items = data.result?.data || [];
+    return items.map(i => ({
+      title: i.title?.replace(/<[^>]+>/g, '') || '',
+      url: i.url || '',
+      date: i.ctime ? new Date(parseInt(i.ctime)*1000).toISOString().slice(0,10) : '',
+      level: level,
+      source: i.media_name || '新浪',
+      party: PARTY_KWS.some(kw => (i.title||'').includes(kw)),
+    })).filter(i => i.title.length > 5);
+  } catch(e) {
+    return [];
+  }
+}
+
+// ===== 示例数据（当实时抓取不可用时）=====
+function getSampleNews() {
+  return [
+    {level:'中央要闻',title:'观察者网时政要闻示例（一）',url:'https://www.guancha.cn',date:'2026-04-01',source:'观察者网',party:true},
+    {level:'中央要闻',title:'抖音、淘天、小红书被约谈',url:'https://www.guancha.cn',date:'2026-04-01',source:'观察者网',party:true},
+    {level:'中央要闻',title:'"天网2026"行动正式启动',url:'https://www.guancha.cn',date:'2026-04-01',source:'观察者网',party:true},
+    {level:'迪庆州委',title:'州四套班子领导参加春季义务植树活动',url:'https://www.diqing.gov.cn',date:'2026-04-01',source:'迪庆州政府',party:true},
+    {level:'迪庆州委',title:'张卫东到香格里拉市接待信访群众',url:'https://www.diqing.gov.cn',date:'2026-03-31',source:'迪庆州政府',party:true},
+    {level:'迪庆州委',title:'罗朝峰率队调研旅居产业发展',url:'https://www.diqing.gov.cn',date:'2026-03-31',source:'迪庆州政府',party:true},
+    {level:'迪庆州委',title:'全州社会工作部长会议召开',url:'https://www.diqing.gov.cn',date:'2026-03-30',source:'迪庆州政府',party:true},
+    {level:'迪庆州委',title:'张卫东与云南顺丰速运有限公司总经理蒋磊会谈',url:'https://www.diqing.gov.cn',date:'2026-03-30',source:'迪庆州政府',party:true},
+  ];
+}
+
+// ===== 渲染 =====
+
+function renderNews(news) {
+  const stats = document.getElementById('stats');
+  const list = document.getElementById('news-list');
+  
+  const total = news.length;
+  const central = news.filter(n => n.level.includes('中央')).length;
+  const yunnan = news.filter(n => n.level.includes('云南')).length;
+  const diqing = news.filter(n => n.level.includes('迪庆')).length;
+  
+  stats.innerHTML = `
+    <div class="stat"><div class="stat-num">${total}</div><div class="stat-label">全部</div></div>
+    <div class="stat"><div class="stat-num">${central}</div><div class="stat-label">中央</div></div>
+    <div class="stat"><div class="stat-num">${yunnan}</div><div class="stat-label">云南</div></div>
+    <div class="stat"><div class="stat-num">${diqing}</div><div class="stat-label">迪庆</div></div>
+  `;
+  
+  let html = '';
+  const levelConfig = [
+    {key:'中央',name:'中央要闻',cls:'tag-central'},
+    {key:'云南省委',name:'云南省委',cls:'tag-yunnan'},
+    {key:'迪庆州委',name:'迪庆州委',cls:'tag-diqing'},
+  ];
+  
+  levelConfig.forEach(({key,name,cls}) => {
+    const items = news.filter(n => n.level.includes(key));
+    if (!items.length) return;
+    
+    html += `<div class="section-header"><span class="section-title">${name}</span><span style="color:#999;font-size:12px">${items.length}条</span></div>`;
+    
+    items.forEach((item, idx) => {
+      const realIdx = news.indexOf(item);
+      const partyTag = item.party ? '<span class="tag tag-party">党建类</span>' : '';
+      const linkHtml = item.url ? `<a href="${item.url}" target="_blank" style="color:#c41230">原文 ↗</a>` : '';
+      
+      html += `
+        <div class="news-item">
+          <input type="checkbox" id="news-${realIdx}" onchange="updateSelected()">
+          <div class="news-content">
+            <div class="news-title">
+              <span class="tag ${cls}">${name}</span>${partyTag}${item.title}
+            </div>
+            <div class="news-meta">
+              ${item.source ? '<span>📍 ' + item.source + '</span>' : ''}
+              ${item.date ? '<span>📅 ' + item.date + '</span>' : ''}
+              ${linkHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    });
+  });
+  
+  list.innerHTML = html;
+  updateSelected();
+}
+
+function updateSelected() {
+  const cbs = document.querySelectorAll('#news-list input[type="checkbox"]');
+  selectedNews = [];
+  cbs.forEach((cb, i) => { if (cb.checked) selectedNews.push(allNews[i]); });
+  document.getElementById('selected-label').textContent = `已选择：${selectedNews.length} 条`;
+}
+
+function selectAll() {
+  document.querySelectorAll('#news-list input[type="checkbox"]').forEach(cb => cb.checked = true);
+  updateSelected();
+}
+function selectNone() {
+  document.querySelectorAll('#news-list input[type="checkbox"]').forEach(cb => cb.checked = false);
+  updateSelected();
+}
+function selectReverse() {
+  document.querySelectorAll('#news-list input[type="checkbox"]').forEach(cb => cb.checked = !cb.checked);
+  updateSelected();
+}
+function selectParty() {
+  document.querySelectorAll('#news-list input[type="checkbox"]').forEach((cb, i) => {
+    cb.checked = allNews[i].party === true;
+  });
+  updateSelected();
+}
+
+// ===== 生成Excel =====
+function generateExcel(news) {
+  // 生成HTML格式的表格，下载为xlsx
+  let html = `<html xmlns:o="urn:schemas-microsoft-com:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>
+table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px;font-size:13px}
+th{background:#c41230;color:#fff;font-weight:bold}a{color:#c41230}
+</style></head><body><table>
+<tr><th>序号</th><th>级别</th><th>新闻标题</th><th>来源</th><th>日期</th><th>链接</th></tr>
+`;
+  news.forEach((n,i) => {
+    html += `<tr><td>${i+1}</td><td>${n.level}</td><td>${n.title}</td><td>${n.source||''}</td><td>${n.date||''}</td><td>${n.url?'<a href="'+n.url+'">查看</a>':''}</td></tr>\n`;
+  });
+  html += '</table></body></html>';
+  return html;
+}
+
+// ===== 生成Word（HTML转DOCX兼容格式）=====
+function generateWord(news) {
+  const now = new Date();
+  let html = `<html xmlns="http://www.w3.org/TR/REC-html40" xmlns:w="urn:schemas-microsoft-com:office:word">
+<head><meta charset="utf-8"><style>
+body{font-family:仿宋;font-size:16pt;line-height:28pt;margin:2.54cm 2.1cm 2.54cm 2.8cm}
+h1{font-family:方正小标宋简体;font-size:22pt;text-align:center;margin:12pt 0}
+h2{font-family:方正小标宋简体;font-size:18pt;text-align:center;margin:12pt 0}
+.section{margin-top:16pt;font-weight:bold}
+.item{margin-top:6pt;text-indent:2em}
+.meta{font-size:14pt;color:#666;margin-top:2pt;text-indent:2em}
+</style></head><body>
+<h1>A镇老干部学习资料</h1>
+<h2>——每周要闻汇编</h2>
+<p style="text-align:center;font-size:14pt">编制日期：${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日</p>
+`;
+  
+  const levelMap = [
+    {key:'中央',title:'一、中央要闻'},
+    {key:'云南省委',title:'二、云南省委要闻'},
+    {key:'迪庆州委',title:'三、迪庆州委要闻'},
+  ];
+  
+  levelMap.forEach(({key,title}) => {
+    const items = news.filter(n => key.includes(n.level) || n.level.includes(key));
+    if (!items.length) return;
+    html += `<p class="section">${title}</p>\n`;
+    items.forEach((n,i) => {
+      html += `<p class="item">（${i+1}）${n.title}</p>\n`;
+      html += `<p class="meta">来源：${n.source||''}${n.date?'　　日期：'+n.date:''}</p>\n`;
+    });
+  });
+  
+  html += '</body></html>';
+  return html;
+}
+
+// ===== 文件下载 =====
+function generateFiles() {
+  if (!selectedNews.length) { alert('请先勾选要闻！'); return; }
+  
+  document.getElementById('download-box').classList.add('show');
+  document.getElementById('download-box').scrollIntoView({behavior:'smooth'});
+  setStatus(`✓ 已准备 ${selectedNews.length} 条要闻的文件`, '#2e7d32');
+}
+
+function downloadExcel() {
+  const html = generateExcel(selectedNews);
+  downloadFile(html, '本周要闻_' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '.xls', 'application/vnd.ms-excel');
+}
+
+function downloadWord() {
+  const html = generateWord(selectedNews);
+  downloadFile(html, '本周要闻_' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '.doc', 'application/msword');
+}
+
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], {type: mimeType + ';charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
